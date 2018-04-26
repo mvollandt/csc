@@ -2,14 +2,15 @@
 File name       : csc.py
 Description     : check Cisco Nexus configs for security settings (using nxapi)
 Created         : 07/03/2018
-Last Modified   : 25/04/2018
-Version         : 0.1
+Last Modified   : 26/04/2018
+Version         : 0.2
 Copyright 2018 M. Vollandt (github863027@s245050704.online.de) All rights reserved.
 
 This script will read Cisco Nexus configuration and check predefined security settings.
 
 Changelog:
 0.1 -   first working version (no checks yet)
+0.2 -   added local config file support
 '''
 
 import argparse
@@ -24,7 +25,7 @@ from csc_checks import *
 
 # cli input parsing
 parser = argparse.ArgumentParser(prog='csc.py')
-parser.add_argument('-s', '--scope', help='defines the scope of the test [ALL, TEST, UAT] or a config file to read - this is required! (def: file "switch.conf" )',
+parser.add_argument('-s', '--scope', help='defines the scope of the test [ALL, TEST, UAT] or a config file to read (def: file "switch.conf" )',
                     default='switch.conf')
 parser.add_argument('-U', '--username', help='args.username (def: admin )',
                     default='admin')
@@ -34,7 +35,15 @@ parser.add_argument('-B', '--basedir', help='directory to store data',
                     default='DATA/')
 parser.parse_args()
 args = parser.parse_args()
+
 configs = {}
+connect = 1
+now = datetime.datetime.now()
+clicommand_nxos = 'show run ntp'
+device_counter = 0
+
+requests.packages.urllib3.disable_warnings()
+
 
 if args.scope == 'ALL':
     device_list = [switch_014, switch_024]
@@ -43,15 +52,12 @@ elif args.scope == 'TEST':
 elif args.scope == 'UAT':
     device_list = [switch_044, ]
 else:
-    with open(args.scope, "r") as output:
-
-
-
-now = datetime.datetime.now()
-clicommand_nxos = 'show run ntp'
-device_counter = 0
-
-requests.packages.urllib3.disable_warnings()
+    connect = 0
+    device_list = [args.scope, ]
+    with open(args.scope, "r") as inputfile:
+        configs.setdefault(args.scope, [])
+        for line in inputfile:
+            configs[args.scope].append(line)
 
 
 def fetch_show_command_data(device, **kwargs):
@@ -128,52 +134,62 @@ def get_configs(**kwargs):
 def check_configs():
     configdata = []
 
-    for device in device_list:
-        device_name = device['device_name']
-        print(device_name)
-        configdata.append('!***' + device_name)
-        for line in configs[device_name].split("\n"):
+    if connect == 1:
+        for device in device_list:
+            device_name = device['device_name']
+            print(device_name)
+            configdata.append('!***' + device_name)
+            for line in configs[device_name].split("\n"):
+                if 'mgmt0' in line:
+                    print('TEST OK ' + line)
+    else:
+        for line in configs[args.scope]:
             if 'mgmt0' in line:
                 print('TEST OK ' + line)
 
-    with open(args.basedir + "device_config_" + timestamp + ".conf", "a") as output:
-        for line in configdata:
-            # print(line)
-            output.write(line + '\n')
+    if connect == 1:
+        with open(args.basedir + "device_config_" + timestamp + ".conf", "a") as output:
+            for line in configdata:
+                output.write(line + '\n')
 
 
-def write_configs():
-    configdata = []
+# def write_configs():
+#     configdata = []
 
-    for device in device_list:
-        device_name = device['device_name']
-        print(device_name)
-        configdata.append('!***' + device_name)
-        for line in configs[device_name].split("\n"):
-            configdata.append(line)
+#     for device in device_list:
+#         device_name = device['device_name']
+#         print(device_name)
+#         configdata.append('!***' + device_name)
+#         for line in configs[device_name].split("\n"):
+#             configdata.append(line)
 
-    with open(args.basedir + "device_config_" + timestamp + ".conf", "a") as output:
-        for line in configdata:
-            # print(line)
-            output.write(line + '\n')
+#     with open(args.basedir + "device_config_" + timestamp + ".conf", "a") as output:
+#         for line in configdata:
+#             # print(line)
+#             output.write(line + '\n')
 
 
 if __name__ == "__main__":
     print(now.strftime("%Y-%m-%d %H:%M:%S"))
     timestamp = now.strftime("%Y%m%d_%H%M")
-    for a_device in device_list:
-        t = Thread(target=get_configs, kwargs=a_device)
-        time.sleep(0.1)
-        t.start()
+    if connect == 1:
+        for a_device in device_list:
+            t = Thread(target=get_configs, kwargs=a_device)
+            time.sleep(0.1)
+            t.start()
 
-    while len(device_list) - device_counter > 0:
-        if (len(device_list) - device_counter > 1):
-            print('waiting for {} devices...'.format(
-                str(len(device_list) - device_counter)))
-        else:
-            print('waiting for {} device...'.format(
-                str(len(device_list) - device_counter)))
-        time.sleep(2)
+        while len(device_list) - device_counter > 0:
+            if (len(device_list) - device_counter > 1):
+                print('waiting for {} devices...'.format(
+                    str(len(device_list) - device_counter)))
+            else:
+                print('waiting for {} device...'.format(
+                    str(len(device_list) - device_counter)))
+            time.sleep(2)
+
+
+    #if connect == 1:
+    #    write_configs()
 
     check_configs()
-    write_configs()
+    print('DONE.')
