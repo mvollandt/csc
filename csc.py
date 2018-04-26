@@ -24,9 +24,8 @@ from csc_checks import *
 
 # cli input parsing
 parser = argparse.ArgumentParser(prog='csc.py')
-parser.add_argument(
-    'scope', help='defines the scope of the test [ALL, TEST, UAT] - this is required!',
-)
+parser.add_argument('-s', '--scope', help='defines the scope of the test [ALL, TEST, UAT] or a config file to read - this is required! (def: file "switch.conf" )',
+                    default='switch.conf')
 parser.add_argument('-U', '--username', help='args.username (def: admin )',
                     default='admin')
 parser.add_argument('-P', '--password', help='args.password (def: password )',
@@ -44,7 +43,8 @@ elif args.scope == 'TEST':
 elif args.scope == 'UAT':
     device_list = [switch_044, ]
 else:
-    device_list = [switch_064, ]
+    with open(args.scope, "r") as output:
+
 
 
 now = datetime.datetime.now()
@@ -122,12 +122,6 @@ def get_configs(**kwargs):
         )
         configs.setdefault(kwargs['device_name'], data['body'])
 
-    else:
-        data = fetch_show_command_data(
-            kwargs, showCommand=clicommand_ios)
-        data = add_devicename_to_log(
-            data_yesterday, kwargs['device_name'])
-        configs.setdefault(kwargs['device_name'], twodays)
     device_counter += 1
 
 
