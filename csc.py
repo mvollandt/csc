@@ -42,6 +42,8 @@ now = datetime.datetime.now()
 clicommand_nxos = 'show run ntp'
 device_counter = 0
 
+check_list = [csc1_1, csc1_2, csc1_3]
+
 requests.packages.urllib3.disable_warnings()
 
 
@@ -114,7 +116,7 @@ def get_data(hostname, username, password, show_command, qtype="cli_show", timeo
 def get_configs(**kwargs):
     global device_counter
     print('connecting to ' + kwargs['device_name'] + '...', end='\n')
-
+    #print("---------> " + str(kwargs))
     if kwargs['device_type'] == 'cisco_nxos':
         data = get_data(
             kwargs["ip"],
@@ -131,21 +133,33 @@ def get_configs(**kwargs):
     device_counter += 1
 
 
+def check_in_simple(**kwargs):
+    data = kwargs['data']
+    print('simple check')
+    print(data)
+    print(data['match'])
+
+
+def check_not_in_simple(**kwargs):
+    data = kwargs['data']
+    print('simple check - not in')
+
+
+def check_parameter(**kwargs):
+    data = kwargs['data']
+    print('parameter check')
+
+
 def check_configs():
     configdata = []
 
-    if connect == 1:
-        for device in device_list:
-            device_name = device['device_name']
-            print(device_name)
-            configdata.append('!***' + device_name)
-            for line in configs[device_name].split("\n"):
-                if 'mgmt0' in line:
-                    print('TEST OK ' + line)
-    else:
-        for line in configs[args.scope]:
-            if 'mgmt0' in line:
-                print('TEST OK ' + line)
+    for check in check_list:
+        if check['check_type'] == 'check_in_simple':
+            check_in_simple(data=check)
+        elif check['check_type'] == 'check_not_in_simple':
+            check_not_in_simple(data=check)
+        else:
+            check_parameter(data=check)
 
     if connect == 1:
         with open(args.basedir + "device_config_" + timestamp + ".conf", "a") as output:
@@ -153,20 +167,13 @@ def check_configs():
                 output.write(line + '\n')
 
 
-# def write_configs():
-#     configdata = []
-
-#     for device in device_list:
-#         device_name = device['device_name']
-#         print(device_name)
-#         configdata.append('!***' + device_name)
-#         for line in configs[device_name].split("\n"):
-#             configdata.append(line)
-
-#     with open(args.basedir + "device_config_" + timestamp + ".conf", "a") as output:
-#         for line in configdata:
-#             # print(line)
-#             output.write(line + '\n')
+def print_result(result, text):
+    if result == 'ok':
+        print('+ {} : {}'.format(result, text))
+    elif result == 'failed':
+        print('- {} : {}'.format(result, text))
+    else:
+        print('o {} : {}'.format(result, text))
 
 
 if __name__ == "__main__":
@@ -174,6 +181,7 @@ if __name__ == "__main__":
     timestamp = now.strftime("%Y%m%d_%H%M")
     if connect == 1:
         for a_device in device_list:
+            print(a_device)
             t = Thread(target=get_configs, kwargs=a_device)
             time.sleep(0.1)
             t.start()
@@ -187,8 +195,7 @@ if __name__ == "__main__":
                     str(len(device_list) - device_counter)))
             time.sleep(2)
 
-
-    #if connect == 1:
+    # if connect == 1:
     #    write_configs()
 
     check_configs()
