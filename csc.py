@@ -2,8 +2,8 @@
 File name       : csc.py
 Description     : check Cisco Nexus configs for security settings (using nxapi)
 Created         : 07/03/2018
-Last Modified   : 26/04/2018
-Version         : 0.2
+Last Modified   : 26704/2018
+Version         : 0.3
 Copyright 2018 M. Vollandt (github863027@s245050704.online.de) All rights reserved.
 
 This script will read Cisco Nexus configuration and check predefined security settings.
@@ -11,6 +11,7 @@ This script will read Cisco Nexus configuration and check predefined security se
 Changelog:
 0.1 -   first working version (no checks yet)
 0.2 -   added local config file support
+0.3 -   simple tests are working (more have to be defined)
 '''
 
 import argparse
@@ -42,7 +43,7 @@ now = datetime.datetime.now()
 clicommand_nxos = 'show run ntp'
 device_counter = 0
 
-check_list = [csc1_1, csc1_2, csc1_3]
+check_list = [csc1_1, csc1_2, csc1_3, csc1_4, csc1_5]
 
 requests.packages.urllib3.disable_warnings()
 
@@ -116,7 +117,6 @@ def get_data(hostname, username, password, show_command, qtype="cli_show", timeo
 def get_configs(**kwargs):
     global device_counter
     print('connecting to ' + kwargs['device_name'] + '...', end='\n')
-    #print("---------> " + str(kwargs))
     if kwargs['device_type'] == 'cisco_nxos':
         data = get_data(
             kwargs["ip"],
@@ -129,20 +129,39 @@ def get_configs(**kwargs):
             120
         )
         configs.setdefault(kwargs['device_name'], data['body'])
-
     device_counter += 1
 
 
-def check_in_simple(**kwargs):
+def check_in_simple(configdata, **kwargs):
+    found = 0
     data = kwargs['data']
-    print('simple check')
     print(data)
-    print(data['match'])
+    print('simple check')
+    for line in configdata:
+        match = re.compile(data['match']).search(line)
+        if match:
+            found = found + 1
+            print('found it --> ' + str(match))
+    if found > 0:
+        print_result('ok', data['result_ok'])
+    else:
+        print_result('failed', data['result_failed'])
 
 
 def check_not_in_simple(**kwargs):
+    found = 0
     data = kwargs['data']
+    print(data)
     print('simple check - not in')
+    for line in configdata:
+        match = re.compile(data['match']).search(line)
+        if match:
+            found = found + 1
+            print('found it --> ' + str(match))
+    if found > 0:
+        print_result('failed', data['result_failed'])
+    else:
+        print_result('ok', data['result_ok'])
 
 
 def check_parameter(**kwargs):
@@ -150,12 +169,10 @@ def check_parameter(**kwargs):
     print('parameter check')
 
 
-def check_configs():
-    configdata = []
-
+def check_configs(configdata):
     for check in check_list:
         if check['check_type'] == 'check_in_simple':
-            check_in_simple(data=check)
+            check_in_simple(configdata, data=check)
         elif check['check_type'] == 'check_not_in_simple':
             check_not_in_simple(data=check)
         else:
@@ -176,12 +193,33 @@ def print_result(result, text):
         print('o {} : {}'.format(result, text))
 
 
+def load_config_from_device(devicename):
+    configdata = []
+    print(devicename)
+    configdata.append('!***' + devicename)
+    for line in configs[devicename].split("\n"):
+        configdata.append(line)
+
+    with open(args.basedir + "device_config_" + timestamp + ".conf", "a") as output:
+        for line in configdata:
+            # print(line)
+            output.write(line + '\n')
+    return configdata
+
+
+def load_config_from_file(filename):
+    configdata = []
+    with open(filename, "r") as input:
+        for line in input:
+            configdata.append(line.replace('\n', ''))
+    return configdata
+
+
 if __name__ == "__main__":
     print(now.strftime("%Y-%m-%d %H:%M:%S"))
     timestamp = now.strftime("%Y%m%d_%H%M")
     if connect == 1:
         for a_device in device_list:
-            print(a_device)
             t = Thread(target=get_configs, kwargs=a_device)
             time.sleep(0.1)
             t.start()
@@ -195,8 +233,13 @@ if __name__ == "__main__":
                     str(len(device_list) - device_counter)))
             time.sleep(2)
 
-    # if connect == 1:
-    #    write_configs()
+    if connect == 1:
+        for device in device_list:
+            devicename = device['device_name']
+            configdata = load_config_from_device(devicename)
+            check_configs(configdata)
+    else:
+        configdata = load_config_from_file(args.scope)
+        check_configs(configdata)
 
-    check_configs()
     print('DONE.')
