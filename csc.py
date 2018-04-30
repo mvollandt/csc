@@ -35,6 +35,8 @@ parser.add_argument('-P', '--password', help='args.password (def: password )',
                     default='password')
 parser.add_argument('-B', '--basedir', help='directory to store data',
                     default='DATA/')
+parser.add_argument("-v", "--verbose", help="increase output verbosity",
+                    action="store_true")
 parser.parse_args()
 args = parser.parse_args()
 
@@ -44,7 +46,7 @@ now = datetime.datetime.now()
 clicommand_nxos = ['show version', 'show run ntp']
 device_counter = 0
 
-check_list = [csc1_1, csc1_2, csc1_3, csc1_4, csc1_5,
+check_list = [csc1_1, csc1_2, csc1_3, csc1_4, csc1_5, csc1_6, csc1_7, csc1_8, csc1_9, csc1_10, csc1_11,
               CVE_2018_0102,
               CVE_2018_0090,
               CVE_2018_0092, ]
@@ -158,6 +160,8 @@ def check_in_simple(configdata, **kwargs):
         match = re.compile(data['match']).search(line)
         if match:
             found = found + 1
+            if args.verbose:
+                    print('# found this: {} '.format(match.group(0)))
     if found > 0 and data['required'] == 'yes':
         print_result('ok', data['result_ok'])
     elif found == 0 and data['required'] == 'no':
@@ -168,7 +172,25 @@ def check_in_simple(configdata, **kwargs):
 
 def check_parameter(configdata, **kwargs):
     data = kwargs['data']
-    print('parameter check')
+    found = 0
+    print('{} - parameter check - {}'.format(data['check_name'], data['info']))
+    parameter = re.compile(data['parameter'])
+    value = re.compile(data['match'])
+
+    for line in configdata:
+        match = parameter.search(line)
+        if match:
+            match_value = value.search(line)
+            if match_value:
+                found = found + 1
+                if args.verbose:
+                    print('# found this: {} {}'.format(match.group(0), match_value.group(0)))
+    if found > 0 and data['required'] == 'yes':
+        print_result('ok', data['result_ok'])
+    elif found == 0 and data['required'] == 'no':
+        print_result('ok', data['result_ok'])
+    else:
+        print_result('failed', data['result_failed'])
 
 def check_two_parameters(configdata, **kwargs):
     data = kwargs['data']
@@ -203,6 +225,9 @@ def print_result(result, text):
 def load_config_from_device(devicename):
     configdata = []
     print(devicename)
+    if args.verbose:
+        print('# loading device config: {}'.format(devicename))
+
     configdata.append('!***' + devicename)
     for line in configs[devicename].split("\n"):
         configdata.append(line)
