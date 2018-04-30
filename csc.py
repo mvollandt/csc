@@ -40,10 +40,13 @@ args = parser.parse_args()
 configs = {}
 connect = 1
 now = datetime.datetime.now()
-clicommand_nxos = 'show run ntp'
+clicommand_nxos = ['show version', 'show run ntp']
 device_counter = 0
 
-check_list = [csc1_1, csc1_2, csc1_3, csc1_4, csc1_5]
+check_list = [csc1_1, csc1_2, csc1_3, csc1_4, csc1_5,
+              CVE_2018_0102,
+              CVE_2018_0090,
+              CVE_2018_0092, ]
 
 requests.packages.urllib3.disable_warnings()
 
@@ -124,24 +127,38 @@ def get_configs(**kwargs):
             args.password,
             # kwargs["username"],
             # kwargs["password"],
-            clicommand_nxos,
+            clicommand_nxos[0],
             "cli_show_ascii",
             120
         )
         configs.setdefault(kwargs['device_name'], data['body'])
+        if clicommand_nxos[1]:
+            data2 = get_data(
+                kwargs["ip"],
+                args.username,
+                args.password,
+                # kwargs["username"],
+                # kwargs["password"],
+                clicommand_nxos[1],
+                "cli_show_ascii",
+                120
+            )
+            configs[kwargs['device_name']
+                    ] = configs[kwargs['device_name']] + data2['body']
+        # print(configs[kwargs['device_name']])
     device_counter += 1
 
 
 def check_in_simple(configdata, **kwargs):
     found = 0
     data = kwargs['data']
-    print(data)
+    #print(data)
     print('simple check')
     for line in configdata:
         match = re.compile(data['match']).search(line)
         if match:
             found = found + 1
-            print('found it --> ' + str(match))
+            #print('found it --> ' + str(match))
     if found > 0:
         print_result('ok', data['result_ok'])
     else:
@@ -151,13 +168,13 @@ def check_in_simple(configdata, **kwargs):
 def check_not_in_simple(**kwargs):
     found = 0
     data = kwargs['data']
-    print(data)
+    #print(data)
     print('simple check - not in')
     for line in configdata:
         match = re.compile(data['match']).search(line)
         if match:
             found = found + 1
-            print('found it --> ' + str(match))
+            #print('found it --> ' + str(match))
     if found > 0:
         print_result('failed', data['result_failed'])
     else:
@@ -168,6 +185,10 @@ def check_parameter(**kwargs):
     data = kwargs['data']
     print('parameter check')
 
+def check_two_parameters(**kwargs):
+    data = kwargs['data']
+    print('two parameters check')
+
 
 def check_configs(configdata):
     for check in check_list:
@@ -175,6 +196,8 @@ def check_configs(configdata):
             check_in_simple(configdata, data=check)
         elif check['check_type'] == 'check_not_in_simple':
             check_not_in_simple(data=check)
+        elif check['check_type'] == 'check_two_parameters':
+            check_two_parameters(data=check)
         else:
             check_parameter(data=check)
 
