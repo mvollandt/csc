@@ -12,7 +12,14 @@ Changelog:
 0.1 -   first working version (no checks yet)
 0.2 -   added local config file support
 0.3 -   simple tests are working (more have to be defined)
-0.4 -   add two parameter support,
+0.4 -   add two parameter support, check info, and check export as csv
+
+Planned:
+- read checks from csv input file
+- colored output
+- save a report (simple text)
+- write readme (add some examples how to use csc.py)
+
 '''
 
 import argparse
@@ -37,6 +44,9 @@ parser.add_argument('-B', '--basedir', help='directory to store data',
                     default='DATA/')
 parser.add_argument("-v", "--verbose", help="increase output verbosity",
                     action="store_true")
+parser.add_argument("-i", "--info", help="show detail for check id")
+parser.add_argument(
+    "-e", "--export", help="export all check ids as csv", action="store_true")
 parser.parse_args()
 args = parser.parse_args()
 
@@ -157,11 +167,11 @@ def check_in_simple(configdata, **kwargs):
     data = kwargs['data']
     print('{} - simple check - {}'.format(data['check_name'], data['info']))
     for line in configdata:
-        match = re.compile(data['match']).search(line)
+        match = re.compile(data['match1']).search(line)
         if match:
             found = found + 1
             if args.verbose:
-                    print('# found this: {} '.format(match.group(0)))
+                print('# found this: {} '.format(match.group(0)))
     if found > 0 and data['required'] == 'yes':
         print_result('ok', data['result_ok'])
     elif found == 0 and data['required'] == 'no':
@@ -174,8 +184,8 @@ def check_parameter(configdata, **kwargs):
     data = kwargs['data']
     found = 0
     print('{} - parameter check - {}'.format(data['check_name'], data['info']))
-    parameter = re.compile(data['parameter'])
-    value = re.compile(data['match'])
+    parameter = re.compile(data['match1'])
+    value = re.compile(data['match2'])
 
     for line in configdata:
         match = parameter.search(line)
@@ -184,7 +194,8 @@ def check_parameter(configdata, **kwargs):
             if match_value:
                 found = found + 1
                 if args.verbose:
-                    print('# found this: {} {}'.format(match.group(0), match_value.group(0)))
+                    print('# found this: {} {}'.format(
+                        match.group(0), match_value.group(0)))
     if found > 0 and data['required'] == 'yes':
         print_result('ok', data['result_ok'])
     elif found == 0 and data['required'] == 'no':
@@ -192,13 +203,40 @@ def check_parameter(configdata, **kwargs):
     else:
         print_result('failed', data['result_failed'])
 
+
 def check_two_parameters(configdata, **kwargs):
     data = kwargs['data']
-    print('two parameters check')
+    found_first = 0
+    found_second = 0
+    print(
+        '{} - two parameters check - {}'.format(data['check_name'], data['info']))
+    match1 = re.compile(data['match1'])
+    match2 = re.compile(data['match2'])
+
+    for line in configdata:
+        match_first = match1.search(line)
+        match_second = match2.search(line)
+        if match_first:
+            found_first = found_first + 1
+            if args.verbose:
+                print('# found first: {}'.format(match_first.group(0)))
+        if match_second:
+            found_second = found_second + 1
+            if args.verbose:
+                print('# found second: {}'.format(match_second.group(0)))
+
+    if found_first > 0 and data['required'] == 'yes':
+        if found_second > 0:
+            print_result('ok', data['result_ok'])
+    elif found_first == 0 and data['required'] == 'no':
+        if found_second == 0:
+            print_result('ok', data['result_ok'])
+    else:
+        print_result('failed', data['result_failed'])
 
 
 def check_configs(configdata):
-    #for k, v in dict.items(): print k, '>', v
+    # for k, v in dict.items(): print k, '>', v
     for check in check_list:
         if check['check_type'] == 'check_in_simple':
             check_in_simple(configdata, data=check)
@@ -247,31 +285,53 @@ def load_config_from_file(filename):
     return configdata
 
 
+def show_check_id_details(checkid):
+   # print(check_list['checkid'])
+    for check in check_list:
+        if check['check_name'] == checkid:
+            for x in check.items():
+                print('{:10}\t: {}'.format(x[0], x[1]))
+
+
+def export_check_id_details():
+    for check in check_list:
+        for x in check.items():
+                #print('{:10}\t: {}'.format(x[0],x[1]))
+            print('{},'.format(x[1].rstrip()), end='')
+        print()
+
+
 if __name__ == "__main__":
     print(now.strftime("%Y-%m-%d %H:%M:%S"))
     timestamp = now.strftime("%Y%m%d_%H%M")
-    if connect == 1:
-        for a_device in device_list:
-            t = Thread(target=get_configs, kwargs=a_device)
-            time.sleep(0.1)
-            t.start()
 
-        while len(device_list) - device_counter > 0:
-            if (len(device_list) - device_counter > 1):
-                print('waiting for {} devices...'.format(
-                    str(len(device_list) - device_counter)))
-            else:
-                print('waiting for {} device...'.format(
-                    str(len(device_list) - device_counter)))
-            time.sleep(2)
-
-    if connect == 1:
-        for device in device_list:
-            devicename = device['device_name']
-            configdata = load_config_from_device(devicename)
-            check_configs(configdata)
+    if args.info:
+        show_check_id_details(args.info)
+    elif args.export:
+        export_check_id_details()
     else:
-        configdata = load_config_from_file(args.scope)
-        check_configs(configdata)
+        if connect == 1:
+            for a_device in device_list:
+                t = Thread(target=get_configs, kwargs=a_device)
+                time.sleep(0.1)
+                t.start()
+
+            while len(device_list) - device_counter > 0:
+                if (len(device_list) - device_counter > 1):
+                    print('waiting for {} devices...'.format(
+                        str(len(device_list) - device_counter)))
+                else:
+                    print('waiting for {} device...'.format(
+                        str(len(device_list) - device_counter)))
+                time.sleep(2)
+
+        if connect == 1:
+            for device in device_list:
+                devicename = device['device_name']
+                configdata = load_config_from_device(devicename)
+                check_configs(configdata)
+        else:
+            configdata = load_config_from_file(args.scope)
+            check_configs(configdata)
 
     print('DONE.')
