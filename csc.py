@@ -2,8 +2,8 @@
 File name       : csc.py
 Description     : check Cisco Nexus configs for security settings (using nxapi)
 Created         : 07/03/2018
-Last Modified   : 26704/2018
-Version         : 0.3
+Last Modified   : 30/04/2018
+Version         : 0.4
 Copyright 2018 M. Vollandt (github863027@s245050704.online.de) All rights reserved.
 
 This script will read Cisco Nexus configuration and check predefined security settings.
@@ -12,6 +12,7 @@ Changelog:
 0.1 -   first working version (no checks yet)
 0.2 -   added local config file support
 0.3 -   simple tests are working (more have to be defined)
+0.4 -   add two parameter support,
 '''
 
 import argparse
@@ -152,54 +153,37 @@ def get_configs(**kwargs):
 def check_in_simple(configdata, **kwargs):
     found = 0
     data = kwargs['data']
-    #print(data)
-    print('simple check')
+    print('{} - simple check - {}'.format(data['check_name'], data['info']))
     for line in configdata:
         match = re.compile(data['match']).search(line)
         if match:
             found = found + 1
-            #print('found it --> ' + str(match))
-    if found > 0:
+    if found > 0 and data['required'] == 'yes':
+        print_result('ok', data['result_ok'])
+    elif found == 0 and data['required'] == 'no':
         print_result('ok', data['result_ok'])
     else:
         print_result('failed', data['result_failed'])
 
 
-def check_not_in_simple(**kwargs):
-    found = 0
-    data = kwargs['data']
-    #print(data)
-    print('simple check - not in')
-    for line in configdata:
-        match = re.compile(data['match']).search(line)
-        if match:
-            found = found + 1
-            #print('found it --> ' + str(match))
-    if found > 0:
-        print_result('failed', data['result_failed'])
-    else:
-        print_result('ok', data['result_ok'])
-
-
-def check_parameter(**kwargs):
+def check_parameter(configdata, **kwargs):
     data = kwargs['data']
     print('parameter check')
 
-def check_two_parameters(**kwargs):
+def check_two_parameters(configdata, **kwargs):
     data = kwargs['data']
     print('two parameters check')
 
 
 def check_configs(configdata):
+    #for k, v in dict.items(): print k, '>', v
     for check in check_list:
         if check['check_type'] == 'check_in_simple':
             check_in_simple(configdata, data=check)
-        elif check['check_type'] == 'check_not_in_simple':
-            check_not_in_simple(data=check)
         elif check['check_type'] == 'check_two_parameters':
-            check_two_parameters(data=check)
+            check_two_parameters(configdata, data=check)
         else:
-            check_parameter(data=check)
+            check_parameter(configdata, data=check)
 
     if connect == 1:
         with open(args.basedir + "device_config_" + timestamp + ".conf", "a") as output:
@@ -209,11 +193,11 @@ def check_configs(configdata):
 
 def print_result(result, text):
     if result == 'ok':
-        print('+ {} : {}'.format(result, text))
+        print('\t+ {} : {}'.format(result, text))
     elif result == 'failed':
-        print('- {} : {}'.format(result, text))
+        print('\t- {} : {}'.format(result, text))
     else:
-        print('o {} : {}'.format(result, text))
+        print('\to {} : {}'.format(result, text))
 
 
 def load_config_from_device(devicename):
