@@ -13,9 +13,9 @@ Changelog:
 0.2 -   added local config file support
 0.3 -   simple tests are working (more have to be defined)
 0.4 -   add two parameter support, check info, and check export as csv
+0.5 -   convert checks (from cvs file) to .py file
 
 Planned:
-- read checks from csv input file
 - colored output
 - save a report (simple text)
 - write readme (add some examples how to use csc.py)
@@ -45,8 +45,10 @@ parser.add_argument('-B', '--basedir', help='directory to store data',
 parser.add_argument("-v", "--verbose", help="increase output verbosity",
                     action="store_true")
 parser.add_argument("-i", "--info", help="show detail for check id")
+
+parser.add_argument('-c', '--convert', help='convert all check ids from csv to csc_checks.py')
 parser.add_argument(
-    "-e", "--export", help="export all check ids as csv", action="store_true")
+    "-e", "--export", help='export all check ids as csv', action="store_true")
 parser.parse_args()
 args = parser.parse_args()
 
@@ -294,11 +296,35 @@ def show_check_id_details(checkid):
 
 
 def export_check_id_details():
-    for check in check_list:
-        for x in check.items():
-                #print('{:10}\t: {}'.format(x[0],x[1]))
-            print('{},'.format(x[1].rstrip()), end='')
-        print()
+    with open(args.basedir + "csc_checks_export.csv", "w") as output:
+        for check in check_list:
+            line = ''
+            for x in check.items():
+                    #print('{:10}\t: {}'.format(x[0],x[1]))
+                print('{};'.format(x[1].rstrip()), end='')
+                line+='{};'.format(x[1].rstrip())
+            output.write(line + '\n')
+            print(line)
+
+def convert_check_ids_from_file(filename):
+        with open(filename, 'r') as infile:
+            with open(args.basedir + "csc_checks_new.py", "w") as outputfile:
+                for line in infile.readlines():
+                    if not line.startswith('#'):
+                        line_values = line.split(';')
+                        output=('{check_name} = {{\'check_name\': \'{check_name}\','.format(check_name=line_values[0]))
+                        output+=('\n\t\t\'check_type\': \'{check_type}\','.format(check_type=line_values[1]))
+                        output+=('\n\t\t\'match1\': \'{match1}\','.format(match1=line_values[2]))
+                        output+=('\n\t\t\'match2\': \'{match2}\','.format(match2=line_values[3]))
+                        output+=('\n\t\t\'required\': \'{required}\','.format(required=line_values[4]))
+                        output+=('\n\t\t\'result_ok\': \'{result_ok}\','.format(result_ok=line_values[5]))
+                        output+=('\n\t\t\'result_failed\': \'{result_failed}\','.format(result_failed=line_values[6]))
+                        output+=('\n\t\t\'info\': \'{info}\','.format(info=line_values[7]))
+                        output+=('\n\t\t\'url\': \'{url}\','.format(url=line_values[8]))
+                        output+=('\n\t\t\'fix\': \'{fix}\','.format(fix=line_values[9].rstrip()))
+                        output+=('}\n')
+                        print(output)
+                        outputfile.write(output + '\n')
 
 
 if __name__ == "__main__":
@@ -309,6 +335,9 @@ if __name__ == "__main__":
         show_check_id_details(args.info)
     elif args.export:
         export_check_id_details()
+    elif args.convert:
+        convert_source = args.convert
+        convert_check_ids_from_file(convert_source)
     else:
         if connect == 1:
             for a_device in device_list:
