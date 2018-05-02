@@ -34,7 +34,7 @@ from csc_checks import *
 
 # cli input parsing
 parser = argparse.ArgumentParser(prog='csc.py')
-parser.add_argument('-s', '--scope', help='defines the scope of the test [ALL, TEST, UAT] or a config file to read (def: file "switch.conf" )',
+parser.add_argument('-s', '--scope', help='defines the scope of the test [ALL, TEST, UAT] or a config file to read (def: file switch.conf)',
                     default='switch.conf')
 parser.add_argument('-U', '--username', help='args.username (def: admin )',
                     default='admin')
@@ -42,13 +42,12 @@ parser.add_argument('-P', '--password', help='args.password (def: password )',
                     default='password')
 parser.add_argument('-B', '--basedir', help='directory to store data',
                     default='DATA/')
-parser.add_argument("-v", "--verbose", help="increase output verbosity",
-                    action="store_true")
-parser.add_argument("-i", "--info", help="show detail for check id")
+parser.add_argument('-v', '--verbose', help='increase output verbosity',
+                    action='store_true')
+parser.add_argument('-i', '--info', help='show detail for check id')
 
 parser.add_argument('-c', '--convert', help='convert all check ids from csv to csc_checks.py')
-parser.add_argument(
-    "-e", "--export", help='export all check ids as csv', action="store_true")
+parser.add_argument('-e', '--export', help='export all check ids as csv', action='store_true')
 parser.parse_args()
 args = parser.parse_args()
 
@@ -160,7 +159,6 @@ def get_configs(**kwargs):
             )
             configs[kwargs['device_name']
                     ] = configs[kwargs['device_name']] + data2['body']
-        # print(configs[kwargs['device_name']])
     device_counter += 1
 
 
