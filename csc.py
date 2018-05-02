@@ -2,8 +2,8 @@
 File name       : csc.py
 Description     : check Cisco Nexus configs for security settings (using nxapi)
 Created         : 07/03/2018
-Last Modified   : 30/04/2018
-Version         : 0.4
+Last Modified   : 02/05/2018
+Version         : 0.6
 Copyright 2018 M. Vollandt (github863027@s245050704.online.de) All rights reserved.
 
 This script will read Cisco Nexus configuration and check predefined security settings.
@@ -13,13 +13,12 @@ Changelog:
 0.2 -   added local config file support
 0.3 -   simple tests are working (more have to be defined)
 0.4 -   add two parameter support, check info, and check export as csv
-0.5 -   convert checks (from cvs file) to .py file
+0.5 -   convert checks (from cvs file) to .py file, fix username/password behavior
+0.6 -   colored output for better readability
 
 Planned:
-- colored output
 - save a report (simple text)
 - write readme (add some examples how to use csc.py)
-
 '''
 
 import argparse
@@ -28,6 +27,7 @@ import requests
 import json
 import time
 import datetime
+from colorama import Fore, Back, Style, init
 from threading import Thread
 from csc_devices import *
 from csc_checks import *
@@ -45,7 +45,6 @@ parser.add_argument('-B', '--basedir', help='directory to store data',
 parser.add_argument('-v', '--verbose', help='increase output verbosity',
                     action='store_true')
 parser.add_argument('-i', '--info', help='show detail for check id')
-
 parser.add_argument('-c', '--convert', help='convert all check ids from csv to csc_checks.py')
 parser.add_argument('-e', '--export', help='export all check ids as csv', action='store_true')
 parser.parse_args()
@@ -60,7 +59,8 @@ device_counter = 0
 check_list = [csc1_1, csc1_2, csc1_3, csc1_4, csc1_5, csc1_6, csc1_7, csc1_8, csc1_9, csc1_10, csc1_11,
               CVE_2018_0102,
               CVE_2018_0090,
-              CVE_2018_0092, ]
+              CVE_2018_0092,
+              CVE_2018_009x, ]
 
 requests.packages.urllib3.disable_warnings()
 
@@ -135,12 +135,18 @@ def get_configs(**kwargs):
     global device_counter
     print('connecting to ' + kwargs['device_name'] + '...', end='\n')
     if kwargs['device_type'] == 'cisco_nxos':
+        if kwargs["username"] == 'dummy_username':
+            username = args.username
+        else:
+            username = kwargs["username"]
+        if kwargs["password"] == 'dummy_password':
+            password = args.password
+        else:
+            password = kwargs["password"]
         data = get_data(
             kwargs["ip"],
-            args.username,
-            args.password,
-            # kwargs["username"],
-            # kwargs["password"],
+            username,
+            password,
             clicommand_nxos[0],
             "cli_show_ascii",
             120
@@ -149,10 +155,8 @@ def get_configs(**kwargs):
         if clicommand_nxos[1]:
             data2 = get_data(
                 kwargs["ip"],
-                args.username,
-                args.password,
-                # kwargs["username"],
-                # kwargs["password"],
+                username,
+                password,
                 clicommand_nxos[1],
                 "cli_show_ascii",
                 120
@@ -171,7 +175,7 @@ def check_in_simple(configdata, **kwargs):
         if match:
             found = found + 1
             if args.verbose:
-                print('# found this: {} '.format(match.group(0)))
+                print('\033[36m' + '# found this: {} '.format(match.group(0)) + '\033[37m')
     if found > 0 and data['required'] == 'yes':
         print_result('ok', data['result_ok'])
     elif found == 0 and data['required'] == 'no':
@@ -194,8 +198,8 @@ def check_parameter(configdata, **kwargs):
             if match_value:
                 found = found + 1
                 if args.verbose:
-                    print('# found this: {} {}'.format(
-                        match.group(0), match_value.group(0)))
+                    print('\033[36m' + '# found this: {} {}'.format(
+                        match.group(0), match_value.group(0)) + '\033[37m')
     if found > 0 and data['required'] == 'yes':
         print_result('ok', data['result_ok'])
     elif found == 0 and data['required'] == 'no':
@@ -219,11 +223,11 @@ def check_two_parameters(configdata, **kwargs):
         if match_first:
             found_first = found_first + 1
             if args.verbose:
-                print('# found first: {}'.format(match_first.group(0)))
+                print('\033[36m' + '# found first: {}'.format(match_first.group(0)) + '\033[37m')
         if match_second:
             found_second = found_second + 1
             if args.verbose:
-                print('# found second: {}'.format(match_second.group(0)))
+                print('\033[36m' + '# found second: {}'.format(match_second.group(0)) + '\033[37m')
 
     if found_first > 0 and data['required'] == 'yes':
         if found_second > 0:
@@ -236,7 +240,6 @@ def check_two_parameters(configdata, **kwargs):
 
 
 def check_configs(configdata):
-    # for k, v in dict.items(): print k, '>', v
     for check in check_list:
         if check['check_type'] == 'check_in_simple':
             check_in_simple(configdata, data=check)
@@ -253,18 +256,19 @@ def check_configs(configdata):
 
 def print_result(result, text):
     if result == 'ok':
-        print('\t+ {} : {}'.format(result, text))
+        #print('\033[31m' + 'some red text')
+        print('\033[32m' + '\t+ {} : {}'.format(result, text) + '\033[37m')
     elif result == 'failed':
-        print('\t- {} : {}'.format(result, text))
+        print('\033[31m' + '\t- {} : {}'.format(result, text) + '\033[37m')
     else:
-        print('\to {} : {}'.format(result, text))
+        print('\033[33m' + '\to {} : {}'.format(result, text) + '\033[37m')
 
 
 def load_config_from_device(devicename):
     configdata = []
     print(devicename)
     if args.verbose:
-        print('# loading device config: {}'.format(devicename))
+        print('\033[36m' + '# loading device config: {}'.format(devicename) + '\033[37m')
 
     configdata.append('!***' + devicename)
     for line in configs[devicename].split("\n"):
@@ -286,7 +290,6 @@ def load_config_from_file(filename):
 
 
 def show_check_id_details(checkid):
-   # print(check_list['checkid'])
     for check in check_list:
         if check['check_name'] == checkid:
             for x in check.items():
@@ -329,7 +332,8 @@ def convert_check_ids_from_file(filename):
 
 
 if __name__ == "__main__":
-    print(now.strftime("%Y-%m-%d %H:%M:%S"))
+    init()  # init colorama
+    print('\033[37m' + now.strftime("%Y-%m-%d %H:%M:%S"))
     timestamp = now.strftime("%Y%m%d_%H%M")
 
     if args.info:
