@@ -308,7 +308,10 @@ def export_check_id_details():
 
 def convert_check_ids_from_file(filename):
         with open(filename, 'r') as infile:
-            with open(args.basedir + "csc_checks_new.py", "w") as outputfile:
+            with open(args.basedir + "csc_checks.py", "w") as outputfile:
+                outputfile.write('# filename    : csc_checks.py\n')
+                outputfile.write('# description : check definitions (security best practices and CVEs)\n')
+                outputfile.write('# create date : {}\n\n'.format(now))
                 for line in infile.readlines():
                     if not line.startswith('#'):
                         line_values = line.split(';')
