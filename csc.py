@@ -2,8 +2,8 @@
 File name       : csc.py
 Description     : check Cisco Nexus configs for security settings (using nxapi)
 Created         : 07/03/2018
-Last Modified   : 02/05/2018
-Version         : 0.6
+Last Modified   : 04/05/2018
+Version         : 0.7
 Copyright 2018 M. Vollandt (github863027@s245050704.online.de) All rights reserved.
 
 This script will read Cisco Nexus configuration and check predefined security settings.
@@ -15,9 +15,9 @@ Changelog:
 0.4 -   add two parameter support, check info, and check export as csv
 0.5 -   convert checks (from cvs file) to .py file, fix username/password behavior
 0.6 -   colored output for better readability
+0.7 -   write results as reports ("DATA/csc_report_<devicename>.txt")
 
 Planned:
-- save a report (simple text)
 - write readme (add some examples how to use csc.py)
 '''
 
