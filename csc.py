@@ -45,8 +45,10 @@ parser.add_argument('-B', '--basedir', help='directory to store data',
 parser.add_argument('-v', '--verbose', help='increase output verbosity',
                     action='store_true')
 parser.add_argument('-i', '--info', help='show detail for check id')
-parser.add_argument('-c', '--convert', help='convert all check ids from csv to csc_checks.py')
-parser.add_argument('-e', '--export', help='export all check ids as csv', action='store_true')
+parser.add_argument('-c', '--convert',
+                    help='convert all check ids from csv to csc_checks.py')
+parser.add_argument(
+    '-e', '--export', help='export all check ids as csv', action='store_true')
 parser.parse_args()
 args = parser.parse_args()
 
@@ -166,28 +168,33 @@ def get_configs(**kwargs):
     device_counter += 1
 
 
-def check_in_simple(configdata, **kwargs):
+def check_in_simple(report, configdata, **kwargs):
     found = 0
     data = kwargs['data']
     print('{} - simple check - {}'.format(data['check_name'], data['info']))
+    report.write(
+        '{} - simple check - {}\n'.format(data['check_name'], data['info']))
     for line in configdata:
         match = re.compile(data['match1']).search(line)
         if match:
             found = found + 1
             if args.verbose:
-                print('\033[36m' + '# found this: {} '.format(match.group(0)) + '\033[37m')
+                print(
+                    '\033[36m' + '# found this: {} '.format(match.group(0)) + '\033[37m')
     if found > 0 and data['required'] == 'yes':
-        print_result('ok', data['result_ok'])
+        print_result(report, 'ok', data['result_ok'])
     elif found == 0 and data['required'] == 'no':
-        print_result('ok', data['result_ok'])
+        print_result(report, 'ok', data['result_ok'])
     else:
-        print_result('failed', data['result_failed'])
+        print_result(report, 'failed', data['result_failed'])
 
 
-def check_parameter(configdata, **kwargs):
+def check_parameter(report, configdata, **kwargs):
     data = kwargs['data']
     found = 0
     print('{} - parameter check - {}'.format(data['check_name'], data['info']))
+    report.write(
+        '{} - parameter check - {}\n'.format(data['check_name'], data['info']))
     parameter = re.compile(data['match1'])
     value = re.compile(data['match2'])
 
@@ -201,19 +208,21 @@ def check_parameter(configdata, **kwargs):
                     print('\033[36m' + '# found this: {} {}'.format(
                         match.group(0), match_value.group(0)) + '\033[37m')
     if found > 0 and data['required'] == 'yes':
-        print_result('ok', data['result_ok'])
+        print_result(report, 'ok', data['result_ok'])
     elif found == 0 and data['required'] == 'no':
-        print_result('ok', data['result_ok'])
+        print_result(report, 'ok', data['result_ok'])
     else:
-        print_result('failed', data['result_failed'])
+        print_result(report, 'failed', data['result_failed'])
 
 
-def check_two_parameters(configdata, **kwargs):
+def check_two_parameters(report, configdata, **kwargs):
     data = kwargs['data']
     found_first = 0
     found_second = 0
     print(
         '{} - two parameters check - {}'.format(data['check_name'], data['info']))
+    report.write(
+        '{} - two parameters check - {}\n'.format(data['check_name'], data['info']))
     match1 = re.compile(data['match1'])
     match2 = re.compile(data['match2'])
 
@@ -223,30 +232,32 @@ def check_two_parameters(configdata, **kwargs):
         if match_first:
             found_first = found_first + 1
             if args.verbose:
-                print('\033[36m' + '# found first: {}'.format(match_first.group(0)) + '\033[37m')
+                print(
+                    '\033[36m' + '# found first: {}'.format(match_first.group(0)) + '\033[37m')
         if match_second:
             found_second = found_second + 1
             if args.verbose:
-                print('\033[36m' + '# found second: {}'.format(match_second.group(0)) + '\033[37m')
+                print(
+                    '\033[36m' + '# found second: {}'.format(match_second.group(0)) + '\033[37m')
 
     if found_first > 0 and data['required'] == 'yes':
         if found_second > 0:
-            print_result('ok', data['result_ok'])
+            print_result(report, 'ok', data['result_ok'])
     elif found_first == 0 and data['required'] == 'no':
         if found_second == 0:
-            print_result('ok', data['result_ok'])
+            print_result(report, 'ok', data['result_ok'])
     else:
-        print_result('failed', data['result_failed'])
+        print_result(report, 'failed', data['result_failed'])
 
 
-def check_configs(configdata):
+def check_configs(report, configdata):
     for check in check_list:
         if check['check_type'] == 'check_in_simple':
-            check_in_simple(configdata, data=check)
+            check_in_simple(report, configdata, data=check)
         elif check['check_type'] == 'check_two_parameters':
-            check_two_parameters(configdata, data=check)
+            check_two_parameters(report, configdata, data=check)
         else:
-            check_parameter(configdata, data=check)
+            check_parameter(report, configdata, data=check)
 
     if connect == 1:
         with open(args.basedir + "device_config_" + timestamp + ".conf", "a") as output:
@@ -254,21 +265,25 @@ def check_configs(configdata):
                 output.write(line + '\n')
 
 
-def print_result(result, text):
+def print_result(report, result, text):
     if result == 'ok':
         #print('\033[31m' + 'some red text')
         print('\033[32m' + '\t+ {} : {}'.format(result, text) + '\033[37m')
+        report.write('\t+ {} : {}\n'.format(result, text))
     elif result == 'failed':
         print('\033[31m' + '\t- {} : {}'.format(result, text) + '\033[37m')
+        report.write('\t- {} : {}\n'.format(result, text))
     else:
         print('\033[33m' + '\to {} : {}'.format(result, text) + '\033[37m')
+        report.write('\to {} : {}\n'.format(result, text))
 
 
 def load_config_from_device(devicename):
     configdata = []
     print(devicename)
     if args.verbose:
-        print('\033[36m' + '# loading device config: {}'.format(devicename) + '\033[37m')
+        print(
+            '\033[36m' + '# loading device config: {}'.format(devicename) + '\033[37m')
 
     configdata.append('!***' + devicename)
     for line in configs[devicename].split("\n"):
@@ -303,32 +318,44 @@ def export_check_id_details():
             for x in check.items():
                     #print('{:10}\t: {}'.format(x[0],x[1]))
                 print('{};'.format(x[1].rstrip()), end='')
-                line+='{};'.format(x[1].rstrip())
+                line += '{};'.format(x[1].rstrip())
             output.write(line + '\n')
             print(line)
 
+
 def convert_check_ids_from_file(filename):
-        with open(filename, 'r') as infile:
-            with open(args.basedir + "csc_checks.py", "w") as outputfile:
-                outputfile.write('# filename    : csc_checks.py\n')
-                outputfile.write('# description : check definitions (security best practices and CVEs)\n')
-                outputfile.write('# create date : {}\n\n'.format(now))
-                for line in infile.readlines():
-                    if not line.startswith('#'):
-                        line_values = line.split(';')
-                        output=('{check_name} = {{\'check_name\': \'{check_name}\','.format(check_name=line_values[0]))
-                        output+=('\n\t\t\'check_type\': \'{check_type}\','.format(check_type=line_values[1]))
-                        output+=('\n\t\t\'match1\': \'{match1}\','.format(match1=line_values[2]))
-                        output+=('\n\t\t\'match2\': \'{match2}\','.format(match2=line_values[3]))
-                        output+=('\n\t\t\'required\': \'{required}\','.format(required=line_values[4]))
-                        output+=('\n\t\t\'result_ok\': \'{result_ok}\','.format(result_ok=line_values[5]))
-                        output+=('\n\t\t\'result_failed\': \'{result_failed}\','.format(result_failed=line_values[6]))
-                        output+=('\n\t\t\'info\': \'{info}\','.format(info=line_values[7]))
-                        output+=('\n\t\t\'url\': \'{url}\','.format(url=line_values[8]))
-                        output+=('\n\t\t\'fix\': \'{fix}\','.format(fix=line_values[9].rstrip()))
-                        output+=('}\n')
-                        print(output)
-                        outputfile.write(output + '\n')
+    with open(filename, 'r') as infile:
+        with open(args.basedir + "csc_checks.py", "w") as outputfile:
+            outputfile.write('# filename    : csc_checks.py\n')
+            outputfile.write(
+                '# description : check definitions (security best practices and CVEs)\n')
+            outputfile.write('# create date : {}\n\n'.format(now))
+            for line in infile.readlines():
+                if not line.startswith('#'):
+                    line_values = line.split(';')
+                    output = ('{check_name} = {{\'check_name\': \'{check_name}\','.format(
+                        check_name=line_values[0]))
+                    output += ('\n\t\t\'check_type\': \'{check_type}\','.format(
+                        check_type=line_values[1]))
+                    output += ('\n\t\t\'match1\': \'{match1}\','.format(
+                        match1=line_values[2]))
+                    output += ('\n\t\t\'match2\': \'{match2}\','.format(
+                        match2=line_values[3]))
+                    output += ('\n\t\t\'required\': \'{required}\','.format(
+                        required=line_values[4]))
+                    output += ('\n\t\t\'result_ok\': \'{result_ok}\','.format(
+                        result_ok=line_values[5]))
+                    output += ('\n\t\t\'result_failed\': \'{result_failed}\','.format(
+                        result_failed=line_values[6]))
+                    output += ('\n\t\t\'info\': \'{info}\','.format(
+                        info=line_values[7]))
+                    output += ('\n\t\t\'url\': \'{url}\','.format(
+                        url=line_values[8]))
+                    output += ('\n\t\t\'fix\': \'{fix}\','.format(
+                        fix=line_values[9].rstrip()))
+                    output += ('}\n')
+                    print(output)
+                    outputfile.write(output + '\n')
 
 
 if __name__ == "__main__":
@@ -363,9 +390,17 @@ if __name__ == "__main__":
             for device in device_list:
                 devicename = device['device_name']
                 configdata = load_config_from_device(devicename)
-                check_configs(configdata)
+                reportfile = args.basedir + "csc_report_" + devicename + ".txt"
+                with open(reportfile, "w") as report:
+                    report.write(
+                        '# {} report (written at {})\n'.format(devicename, now))
+                    check_configs(report, configdata)
         else:
             configdata = load_config_from_file(args.scope)
-            check_configs(configdata)
+            reportfile = args.basedir + "csc_report_" + args.scope + ".txt"
+            with open(reportfile, "w") as report:
+                report.write(
+                    '# {} report (written at {})\n'.format(args.scope, now))
+                check_configs(report, configdata)
 
     print('DONE.')
