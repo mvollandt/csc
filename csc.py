@@ -2,8 +2,8 @@
 File name       : csc.py
 Description     : check Cisco Nexus configs for security settings (using nxapi)
 Created         : 07/03/2018
-Last Modified   : 04/05/2018
-Version         : 0.7
+Last Modified   : 07/05/2018
+Version         : 0.8
 Copyright 2018 M. Vollandt (github863027@s245050704.online.de) All rights reserved.
 
 This script will read Cisco Nexus configuration and check predefined security settings.
@@ -16,9 +16,12 @@ Changelog:
 0.5 -   convert checks (from cvs file) to .py file, fix username/password behavior
 0.6 -   colored output for better readability
 0.7 -   write results as reports ("DATA/csc_report_<devicename>.txt")
+0.8 -   added new checks
 
 Planned:
 - write readme (add some examples how to use csc.py)
+- add more CVE checks
+- add more basic checks
 '''
 
 import argparse
@@ -55,10 +58,13 @@ args = parser.parse_args()
 configs = {}
 connect = 1
 now = datetime.datetime.now()
-clicommand_nxos = ['show version', 'show run ntp']
+# clicommand_nxos = ['show version', 'show run ntp']  # for testing
+clicommand_nxos = ['show version', 'show run all']
 device_counter = 0
 
-check_list = [csc1_1, csc1_2, csc1_3, csc1_4, csc1_5, csc1_6, csc1_7, csc1_8, csc1_9, csc1_10, csc1_11,
+check_list = [csc1_1, csc1_2, csc1_3, csc1_4, csc1_5, csc1_6, csc1_7, csc1_8, csc1_9,
+              csc1_10, csc1_11, csc1_12, csc1_13, csc1_14, csc1_15, csc1_16, csc1_17, csc1_18, csc1_19,
+              csc1_20,
               CVE_2018_0102,
               CVE_2018_0090,
               CVE_2018_0092,
@@ -325,7 +331,7 @@ def export_check_id_details():
 
 def convert_check_ids_from_file(filename):
     with open(filename, 'r') as infile:
-        with open(args.basedir + "csc_checks.py", "w") as outputfile:
+        with open("csc_checks.py", "w") as outputfile:
             outputfile.write('# filename    : csc_checks.py\n')
             outputfile.write(
                 '# description : check definitions (security best practices and CVEs)\n')
