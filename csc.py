@@ -35,6 +35,8 @@ from threading import Thread
 from csc_devices import *
 from csc_checks import *
 
+requests.packages.urllib3.disable_warnings()
+
 # cli input parsing
 parser = argparse.ArgumentParser(prog='csc.py')
 parser.add_argument('-s', '--scope', help='defines the scope of the test [ALL, TEST, UAT] or a config file to read (def: file switch.conf)',
@@ -56,6 +58,7 @@ parser.parse_args()
 args = parser.parse_args()
 
 configs = {}
+check_list = []
 connect = 1
 now = datetime.datetime.now()
 # clicommand_nxos = ['show version', 'show run ntp']  # for testing
@@ -63,14 +66,12 @@ clicommand_nxos = ['show version', 'show run all']
 device_counter = 0
 
 check_list = [csc1_1, csc1_2, csc1_3, csc1_4, csc1_5, csc1_6, csc1_7, csc1_8, csc1_9,
-              csc1_10, csc1_11, csc1_12, csc1_13, csc1_14, csc1_15, csc1_16, csc1_17, csc1_18, csc1_19,
-              csc1_20,
-              CVE_2018_0102,
-              CVE_2018_0090,
-              CVE_2018_0092,
-              CVE_2018_009x, ]
-
-requests.packages.urllib3.disable_warnings()
+               csc1_10, csc1_11, csc1_12, csc1_13, csc1_14, csc1_15, csc1_16, csc1_17, csc1_18, csc1_19,
+               csc1_20,
+               CVE_2018_0102,
+               CVE_2018_0090,
+               CVE_2018_0092,
+               CVE_2017_12341, ]
 
 
 if args.scope == 'ALL':
