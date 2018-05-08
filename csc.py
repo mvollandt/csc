@@ -68,7 +68,7 @@ device_counter = 0
 # please checks to test to this list - otherwise they will be ignored
 check_list = [csc1_1, csc1_2, csc1_3, csc1_4, csc1_5, csc1_6, csc1_7, csc1_8, csc1_9,
                csc1_10, csc1_11, csc1_12, csc1_13, csc1_14, csc1_15, csc1_16, csc1_17, csc1_18, csc1_19,
-               csc1_20,
+               csc1_20, csc1_21,
                CVE_2018_0102,
                CVE_2018_0090,
                CVE_2018_0092,
