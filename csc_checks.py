@@ -222,6 +222,17 @@ csc1_20 = {'check_name': 'csc1_20',
 		'url': 'n/a',
 		'fix': 'Command to fix',}
 
+csc1_21 = {'check_name': 'csc1_21',
+		'check_type': 'check_in_simple',
+		'match1': 'exec-timeout 15',
+		'match2': 'n/a',
+		'required': 'yes',
+		'result_ok': 'Test successful.',
+		'result_failed': 'Test failed.',
+		'info': 'minimize axec timeout to 15s',
+		'url': 'n/a',
+		'fix': 'Command to fix',}
+
 CVE_2018_0102 = {'check_name': 'CVE_2018_0102',
 		'check_type': 'check_two_parameters',
 		'match1': 'feature pong',
